@@ -1,21 +1,21 @@
 /**
- * obelisk-blossom: boot, the hourly WoT rebuild, SIGHUP list reload.
+ * blossom-wot: keeps blossom-server's upload allowlists in step with the
+ * web of trust, and closes uploads when the disk is tight.
  *
- *   SIGHUP  re-reads <dataDir>/config.json (manualAllow, blocked,
- *           referenceAccounts, maxHops) and rebuilds the graph if the roots
- *           or depth changed — the relay's "Sync" button, as a signal.
+ *   hourly   rebuild the follow graph, rewrite tier1.txt / tier2.txt
+ *   1/min    disk guard: store over cap or volume low → empty the files
+ *   SIGHUP   re-read config.json (manualAllow, blocked, referenceAccounts,
+ *            maxHops); rewrite at once, rebuild if the roots or depth changed
  */
 import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
 import WebSocket from 'ws';
 
-import { Admission } from './admission.js';
-import { loadConfig, type Config } from './config.js';
-import { startServer } from './server.js';
-import { BlobStore } from './store.js';
+import { loadConfig } from './config.js';
+import { dirBytes, freeBytes, judgeDisk, tierLists, writeTierFiles, type GuardVerdict } from './tiers.js';
 import { acceptRebuild, buildGraph, loadGraph, saveGraph, type ContactList, type GraphSnapshot } from './wot-graph.js';
 
 // Node 22's built-in WebSocket re-fires `error` from inside close(), and
-// nostr-tools 2.25's onerror calls close() -> unbounded recursion on the first
+// nostr-tools 2.25's onerror calls close(): unbounded recursion on the first
 // unreachable relay ("Maximum call stack size exceeded", crash loop under pm2).
 // The `ws` package doesn't, so the pool uses it.
 useWebSocketImplementation(WebSocket);
@@ -34,11 +34,21 @@ function poolFetcher(relays: string[]) {
   };
 }
 
-const cfg: Config = loadConfig();
-const store = new BlobStore(cfg.dataDir);
-let graph: GraphSnapshot | null = loadGraph(cfg.dataDir);
-const admission = new Admission(cfg, graph);
+const cfg = loadConfig();
+let graph: GraphSnapshot | null = loadGraph(cfg.stateDir);
+let guard: GuardVerdict = { open: true };
 let building = false;
+
+function publish(reason: string): void {
+  if (!guard.open) {
+    writeTierFiles(cfg.tierDir, { tier1: [], tier2: [] }, `uploads closed: ${guard.reason}`);
+    log('tier files emptied', { reason, guard: guard.reason });
+    return;
+  }
+  const lists = tierLists(graph, cfg);
+  writeTierFiles(cfg.tierDir, lists, graph ? `graph built ${new Date(graph.builtAt * 1000).toISOString()}` : 'no graph yet');
+  log('tier files written', { reason, tier1: lists.tier1.length, tier2: lists.tier2.length });
+}
 
 async function rebuild(reason: string): Promise<void> {
   if (building) return;
@@ -59,12 +69,12 @@ async function rebuild(reason: string): Promise<void> {
       return;
     }
     graph = next;
-    admission.setGraph(next);
-    saveGraph(cfg.dataDir, next);
+    saveGraph(cfg.stateDir, next);
     log('follow graph rebuilt', {
       reason, ms: Date.now() - started, contactLists: next.contactListsFetched,
       admitted, maxHops: next.maxHops, truncated: next.truncated,
     });
+    publish(reason);
   } catch (err) {
     log('follow graph rebuild failed', { reason, error: String(err) });
   } finally {
@@ -72,27 +82,37 @@ async function rebuild(reason: string): Promise<void> {
   }
 }
 
-const server = startServer({ cfg, store, admission });
-log('obelisk-blossom listening', {
-  host: cfg.host, port: cfg.port, dataDir: cfg.dataDir, references: cfg.referenceAccounts.length,
-  maxHops: cfg.maxHops, cachedGraph: admission.graphInfo,
-});
+function checkDisk(): void {
+  const next = judgeDisk(dirBytes(cfg.blobDir), freeBytes(cfg.tierDir), cfg);
+  if (next.open !== guard.open) {
+    guard = next;
+    log(next.open ? 'disk guard: uploads reopened' : 'disk guard: uploads closed', next.open ? {} : { why: next.reason });
+    publish('disk-guard');
+  }
+}
 
+log('blossom-wot starting', {
+  stateDir: cfg.stateDir, tierDir: cfg.tierDir, blobDir: cfg.blobDir,
+  references: cfg.referenceAccounts.length, maxHops: cfg.maxHops,
+  cachedGraph: graph ? Object.keys(graph.hops).length : null,
+});
+checkDisk();
+publish('startup');
 void rebuild('startup');
-const timer = setInterval(() => void rebuild('interval'), cfg.rebuildIntervalMs);
+const rebuildTimer = setInterval(() => void rebuild('interval'), cfg.rebuildIntervalMs);
+const guardTimer = setInterval(checkDisk, cfg.guardIntervalMs);
 
 process.on('SIGHUP', () => {
   const next = loadConfig();
   const rootsChanged = next.maxHops !== cfg.maxHops
     || next.referenceAccounts.join() !== cfg.referenceAccounts.join()
     || next.followRelays.join() !== cfg.followRelays.join();
-  // Mutate in place: Admission holds this same object and reads maxHops from it.
   Object.assign(cfg, {
     referenceAccounts: next.referenceAccounts, manualAllow: next.manualAllow, blocked: next.blocked,
     followRelays: next.followRelays, maxHops: next.maxHops,
   });
-  admission.setLists({ blocked: next.blocked, manualAllow: next.manualAllow });
   log('config reloaded', { manualAllow: next.manualAllow.length, blocked: next.blocked.length, rootsChanged });
+  publish('sighup');
   if (rootsChanged) {
     graph = null;
     void rebuild('sighup');
@@ -103,8 +123,8 @@ process.on('unhandledRejection', (err) => log('unhandled rejection', { error: St
 
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {
   process.on(sig, () => {
-    clearInterval(timer);
-    server.close(() => process.exit(0));
-    setTimeout(() => process.exit(0), 5000).unref();
+    clearInterval(rebuildTimer);
+    clearInterval(guardTimer);
+    process.exit(0);
   });
 }

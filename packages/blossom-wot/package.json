@@ -1,8 +1,8 @@
 {
-  "name": "@obelisk/blossom",
+  "name": "@obelisk/blossom-wot",
   "version": "0.1.0",
   "private": true,
-  "description": "Blossom server for Obelisk app bundles, with obelisk-relay-style WoT upload admission",
+  "description": "Web-of-trust upload allowlists for blossom-server (obelisk-app fork, pubkeysFile rules), obelisk-relay style",
   "type": "module",
   "engines": {
     "node": ">=22"
