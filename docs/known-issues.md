@@ -32,6 +32,7 @@ Full context is in [security.md § Gaps](security.md#gaps-what-the-sandbox-does-
 - **The first open of an app is slow.** It fetches the entry (and eventually assets) from Blossom. Later opens hit the Cache Storage copy keyed by hash.
 - **No `eval`.** Bundles that use `eval` or `new Function` (some template engines, older emulators) don't load, because the frame CSP omits `'unsafe-eval'`. This is intentional. Document it in `building-an-app.md` when that's written.
 - **Size caps are guesses.** The 2 MiB entry, 32 MiB total, 64 KiB content per event and the 20/5-per-second bucket were sized against the three first-party games and aren't measured. Stacker's music alone is about 8.8 MiB of MP3s.
+- **A Vesta save rides whole inside `start`.** Resuming publishes `{resume: <the entire save file>}` (startState + every turn + endState), as dex did on `create`. The host caps event content at 64 KiB, so a long game's save will be refused with `too-large`. The engine only reads `endState`, so publishing `{resume: {endState}}` would fix it. That isn't done yet, because it changes what a resumed table replays from and should be checked against dex's `readResumeState` first.
 - **Participant names and avatars are given to every app.** Needed for any multiplayer UI, but it is data the app could leak (security.md gaps 1–2).
 - **No version-skew handling in the SDK** when a host is older than an app expects, beyond `unsupported` errors. Needs a real test once v1.1 exists.
 - **Legacy `[[game:…]]` tables run the *current* official bundle,** because they have no pin (app-format.md §4). Remove the legacy mapping once the relays have pruned every pre-migration `create` (7 days after the switch).
@@ -45,7 +46,7 @@ This is the build order from the migration plan:
 
 1. ~~The SDK (`packages/sdk`)~~ — **done 2026-09-27**: host client, turn kit (replay, table, clock enforcer) ported from dex, a generic `realtime` hook replacing the Stacker-specific branch, and `testing/` FakeRelay + FakeHost.
 2. ~~The frame loader (`packages/frame`)~~ — **live 2026-09-27** at `https://frame.obelisk.ar/v1/` (Caddy :8101 via the `fabri-ssh` tunnel), next to `https://blossom.obelisk.ar` (pm2 `obelisk-blossom` :3023).
-3. Chain Reaction, Vesta and Stacker ported onto the SDK, with their dex tests.
+3. Chain Reaction and Vesta ported onto the SDK as complete, buildable apps with their dex tests plus built-bundle smoke tests — **done 2026-09-27**. Stacker's engine is ported and its UI is in progress.
 4. The relay change for kind 32390.
 5. The `games.obelisk.ar` dashboard (admin-shell design, see obelisk-design).
 6. The obelisk-dex switch, in one PR.

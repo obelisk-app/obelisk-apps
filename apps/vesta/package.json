@@ -4,7 +4,36 @@
   "private": true,
   "description": "Vesta for Obelisk Apps: settle, trade and build on a hex island",
   "type": "module",
-  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit -p tsconfig.json" },
-  "dependencies": { "@obelisk/apps-sdk": "*", "vesta": "github:fchurca/vesta#semver:^0" },
-  "devDependencies": { "typescript": "^5.7.2", "vitest": "^3.2.4" }
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "node ../../scripts/build-app.mjs ."
+  },
+  "dependencies": {
+    "@obelisk/apps-sdk": "*",
+    "vesta": "github:fchurca/vesta#semver:^0",
+    "@obelisk/apps-ui": "*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "jsdom": "^25.0.1"
+  },
+  "obelisk": {
+    "slug": "vesta",
+    "title": "Vesta",
+    "types": [
+      "game"
+    ],
+    "players": [
+      2,
+      4
+    ],
+    "realtime": false,
+    "content": "Settle a hex island: roll for resources, trade, build roads and settlements, and race to ten victory points. Supports hot-seat and resuming a saved game."
+  }
 }
