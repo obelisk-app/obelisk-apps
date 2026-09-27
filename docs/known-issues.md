@@ -42,7 +42,7 @@ Full context is in [security.md § Gaps](security.md#gaps-what-the-sandbox-does-
 This is the build order from the migration plan:
 
 1. The SDK (`packages/sdk`): host client, turn kit ported from dex `session.ts`, realtime kit from `stacker/match.ts`, fake-host harness.
-2. ~~The frame loader (`packages/frame`)~~: written and served on this host (Caddy :8101). `frame.obelisk.ar` still needs its DNS record and tunnel route.
+2. ~~The frame loader (`packages/frame`)~~ — **live 2026-09-27** at `https://frame.obelisk.ar/v1/` (Caddy :8101 via the `fabri-ssh` tunnel), next to `https://blossom.obelisk.ar` (pm2 `obelisk-blossom` :3023).
 3. Chain Reaction, Vesta and Stacker ported onto the SDK, with their dex tests.
 4. The relay change for kind 32390.
 5. The `games.obelisk.ar` dashboard (admin-shell design, see obelisk-design).
