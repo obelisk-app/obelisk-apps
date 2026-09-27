@@ -33,6 +33,7 @@
       8
     ],
     "realtime": false,
-    "content": "Take turns dropping orbs. When a cell reaches critical mass it explodes into its neighbours and captures them, which can set off a chain. Last colour on the board wins."
+    "content": "Take turns dropping orbs. When a cell reaches critical mass it explodes into its neighbours and captures them, which can set off a chain. Last colour on the board wins.",
+    "icon": "/icon.svg"
   }
 }

@@ -33,6 +33,7 @@
       6
     ],
     "realtime": true,
-    "content": "Real-time falling-block battles: everyone plays at once, cleared lines send garbage to opponents, last board standing wins."
+    "content": "Real-time falling-block battles: everyone plays at once, cleared lines send garbage to opponents, last board standing wins.",
+    "icon": "/icon.svg"
   }
 }
