@@ -6,13 +6,33 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "node ../../scripts/build-app.mjs ."
   },
   "dependencies": {
-    "@obelisk/apps-sdk": "*"
+    "@obelisk/apps-sdk": "*",
+    "@obelisk/apps-ui": "*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "typescript": "^5.7.2",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "jsdom": "^25.0.1"
+  },
+  "obelisk": {
+    "slug": "chain-reaction",
+    "title": "Chain Reaction",
+    "types": [
+      "game"
+    ],
+    "players": [
+      2,
+      8
+    ],
+    "realtime": false,
+    "content": "Take turns dropping orbs. When a cell reaches critical mass it explodes into its neighbours and captures them, which can set off a chain. Last colour on the board wins."
   }
 }

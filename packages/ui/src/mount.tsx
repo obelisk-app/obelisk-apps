@@ -32,6 +32,15 @@ function Root({ host, table, ui }: { host: Host; table: Table; ui: GameUi }) {
   );
 }
 
+/**
+ * The host's accent, applied to the theme token every lc-* class reads, so a
+ * relay retinted purple stays purple inside the frame. Only a #rrggbb gets
+ * through: this value lands in a style attribute.
+ */
+function applyAccent(accent: string): void {
+  if (/^#[0-9a-f]{6}$/i.test(accent)) document.documentElement.style.setProperty('--color-lc-green', accent);
+}
+
 export async function mountGame(ctx: HostContext, ui: GameUi, css?: string): Promise<{ host: Host; table: Table }> {
   if (css) {
     const style = document.createElement('style');
@@ -40,6 +49,8 @@ export async function mountGame(ctx: HostContext, ui: GameUi, css?: string): Pro
   }
   const host = connect(ctx);
   const table = await openTable(host, ui.def);
+  applyAccent(table.init.theme.accent);
+  host.onEnv((e) => applyAccent(e.theme.accent));
   createRoot(ctx.root).render(
     <StrictMode>
       <Root host={host} table={table} ui={ui} />
