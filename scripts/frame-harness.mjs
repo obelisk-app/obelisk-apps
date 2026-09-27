@@ -39,6 +39,14 @@ const ev = (id, pk, at, op, body) => ({ id: String(id).repeat(64).slice(0, 64), 
 window.addEventListener('message', async (e) => {
   if (e.source !== f.contentWindow || e.data?.type !== 'hello') return;
   const entry = new Blob([await (await fetch('/__entry.js')).arrayBuffer()], { type: 'text/javascript' });
+  // Stand-in profile pictures, so avatar rendering is exercised.
+  const pic = async (bg, fg, letter) => {
+    const c = new OffscreenCanvas(96, 96); const g = c.getContext('2d');
+    g.fillStyle = bg; g.fillRect(0, 0, 96, 96); g.fillStyle = fg; g.font = 'bold 56px sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(letter, 48, 52);
+    return c.convertToBlob({ type: 'image/png' });
+  };
+  const avatars = [await pic('#2563eb', '#fff', 'F'), await pic('#ea580c', '#fff', 'B')];
   const ch = new MessageChannel(); port1 = ch.port1;
   port1.onmessage = (m) => {
     const r = m.data; console.log('APP ' + JSON.stringify(r).slice(0, 220));
@@ -51,7 +59,7 @@ window.addEventListener('message', async (e) => {
   port1.start();
   port1.postMessage({ type: 'init', api: 1, app: { address: 'x', title: 'App', author: 'f'.repeat(64) },
     session: { id: S, createdBy: me, createdAt: t0, channelName: 'g' }, me,
-    participants: [{ pubkey: me, name: 'Fabricio' }, { pubkey: B, name: 'Bruno' }], paths: ['/index.js'], locale: 'en',
+    participants: [{ pubkey: me, name: 'Fabricio', avatar: avatars[0] }, { pubkey: B, name: 'Bruno', avatar: avatars[1] }], paths: ['/index.js'], locale: 'en',
     theme: { mode: 'dark', accent: ${JSON.stringify(opt('accent', '#a855f7'))} },
     limits: { contentBytes: 65536, publishPerSecond: 5, storageBytes: 262144 }, connection: { connected: true, since: 0 } });
   const evs = [ev(5, me, t0, 'create', { nonce: 'n' })];

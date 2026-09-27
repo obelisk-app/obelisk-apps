@@ -16,7 +16,7 @@ import { VESTA_PLAYER_COLORS } from './VestaBoard';
 import VestaTable from './VestaTable';
 
 /** The board gets at most this share of the frame's height; the controls need the rest. */
-const BOARD_HEIGHT_SHARE = 0.6;
+const BOARD_HEIGHT_SHARE = 0.8;
 
 function Board({ session, mySeats, onMove, box, seatLabel, busy }: BoardProps) {
   const boardMaxWidth = Math.min(box.width, (box.height * BOARD_HEIGHT_SHARE * CANVAS_WIDTH) / CANVAS_HEIGHT);

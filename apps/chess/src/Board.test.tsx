@@ -3,8 +3,8 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@obelisk/apps-ui';
 import type { GameSession } from '@obelisk/apps-sdk/turn';
 
-import ChessBoard from './Board';
-import { chess, type ChessState } from './engine';
+import ChessBoard, { material } from './Board';
+import { chess, replay, type ChessState } from './engine';
 
 const W = 'pk-white';
 const B = 'pk-black';
@@ -33,11 +33,24 @@ beforeAll(() => {
 });
 
 describe('ChessBoard', () => {
-  it('shows whose move it is and both players', () => {
-    render(<I18nProvider locale="en"><ChessBoard {...props(session(chess.initialState([W, B]), W), [W])} /></I18nProvider>);
-    expect(screen.getByTestId('chess-status')).toHaveTextContent('White to move');
-    expect(screen.getByTestId('chess-board')).toHaveTextContent('Ana');
-    expect(screen.getByTestId('chess-board')).toHaveTextContent('Bruno');
+  it('shows both players in bars, the side to move lit, the viewer at the bottom', () => {
+    render(<I18nProvider locale="en"><ChessBoard {...props(session(chess.initialState([W, B]), W), [B])} /></I18nProvider>);
+    expect(screen.getByTestId('chess-bar-w')).toHaveTextContent('Ana');
+    expect(screen.getByTestId('chess-bar-b')).toHaveTextContent('Bruno');
+    expect(screen.getByTestId('chess-bar-w')).toContainElement(screen.getByTestId('chess-to-move'));
+    // Black's viewer sees their own bar last (bottom).
+    const bars = screen.getAllByTestId(/chess-bar-/).map((el) => el.getAttribute('data-testid'));
+    expect(bars).toEqual(['chess-bar-w', 'chess-bar-b']);
+  });
+
+  it('counts captured material for each side', () => {
+    let s = chess.initialState([W, B]);
+    for (const [seat, from, to] of [[W, 'e2', 'e4'], [B, 'd7', 'd5'], [W, 'e4', 'd5']] as const) {
+      s = chess.applyAction(s, { from, to }, seat, [W, B]).state;
+    }
+    const m = material(replay(s.moves));
+    expect(m.w).toEqual({ taken: ['p'], score: 1 });
+    expect(m.b).toEqual({ taken: [], score: -1 });
   });
 
   it('publishes a click-to-move for the seat on move', async () => {

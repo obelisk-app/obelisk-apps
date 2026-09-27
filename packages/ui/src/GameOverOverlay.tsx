@@ -3,7 +3,8 @@ import type { GameSession } from '@obelisk/apps-sdk/turn';
 
 import { useGameUi } from './game-ui.js';
 import { useTranslation } from './i18n.js';
-import { Avatar, usePeople } from './people.js';
+import { usePeople } from './people.js';
+import { SeatAvatar } from './PlayerTag.js';
 import { isDraw, scoreFor } from './standings.js';
 
 /**
@@ -75,7 +76,7 @@ export default function GameOverOverlay({
 
       {!draw && winner && !iWon && (
         <div className="mt-4 flex items-center gap-2">
-          <Avatar pubkey={winner} size={8} />
+          <SeatAvatar pubkey={winner.split('#')[0]} color={accent} size={40} active />
           <span className="text-sm text-lc-white" data-testid="game-over-winner">
             {nameOf(winner)} took the board
           </span>

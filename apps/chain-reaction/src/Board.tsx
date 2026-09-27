@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { GameSession } from '@obelisk/apps-sdk/turn';
 import type { CRState } from './engine';
-import { useTranslation } from '@obelisk/apps-ui';
+import { PlayerTag, useTranslation } from '@obelisk/apps-ui';
 
 interface Props {
   game: GameSession;
@@ -483,35 +483,27 @@ export default function ChainReactionBoard({ game, mySeats, onAction, maxWidth =
           );
         })}
       </div>
-      <div className="flex flex-wrap gap-2 justify-center text-[10px]">
+      <div className="flex flex-wrap justify-center gap-2" data-testid="cr-players">
         {order.map((pk, seat) => {
           const c = SEAT_COLORS[seat];
-          const isMe = mySeats.includes(pk);
-          const out = eliminated.includes(pk);
-          const turn = game.currentTurn === pk;
+          const owned = cells.reduce((n, cell) => (cell.owner === seat ? n + cell.count : n), 0);
           return (
-            <span
+            <PlayerTag
               key={pk}
-              className={`
-                inline-flex items-center gap-1 px-2 py-0.5 rounded-full border
-                ${turn ? 'border-lc-white' : 'border-lc-border'}
-                ${out ? 'opacity-40 line-through' : ''}
-              `}
+              session={game}
+              seat={pk}
+              label={seatLabel ? seatLabel(pk) : pk.slice(0, 6)}
+              color={c.hex}
+              active={game.currentTurn === pk}
+              mine={mySeats.includes(pk)}
+              out={eliminated.includes(pk)}
+              size={26}
             >
-              <span className={`w-2 h-2 rounded-full ${c.dot}`} />
-              <span className={isMe ? 'text-lc-white' : 'text-lc-muted'}>
-                {seatLabel ? seatLabel(pk) : pk.slice(0, 6)}
-                {isMe && <span className="ml-1 opacity-70">(you)</span>}
-              </span>
-            </span>
+              {eliminated.includes(pk) ? 'out' : `${owned} orbs`}
+            </PlayerTag>
           );
         })}
       </div>
-      {myColor && (
-        <div className="text-center text-[11px] text-lc-muted">
-          {t('games.youPlayAs')} <span className="font-semibold" style={{ color: myColor.hex }}>●</span>
-        </div>
-      )}
     </div>
   );
 }

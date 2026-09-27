@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { GameState, HexCoord, TradeResource } from 'vesta';
 import { getRobbableVertices, computeRates } from 'vesta';
 import type { GameSession } from '@obelisk/apps-sdk/turn';
-import { useTranslation } from '@obelisk/apps-ui';
+import { SeatAvatar, controllerOfSeat, useTranslation } from '@obelisk/apps-ui';
 import { vesta, isRobberPending, isStealPending, type VestaAction } from './definition';
 import VestaBoard, { VESTA_PLAYER_COLORS, type PickMode } from './VestaBoard';
 
@@ -132,7 +132,7 @@ export default function VestaTable({ session, mySeats, seatLabel, onMove, busy, 
               data-testid={`vesta-player-${i}`}
             >
               <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: VESTA_PLAYER_COLORS[i] }} />
+                <SeatAvatar pubkey={controllerOfSeat(session, seat)} color={VESTA_PLAYER_COLORS[i]} size={24} active={onMove} />
                 <span className={`truncate text-[11px] ${mine ? 'text-lc-white' : 'text-lc-muted'}`}>
                   {seatLabel(seat)}
                 </span>

@@ -11,3 +11,4 @@ export { I18nProvider, translator, useTranslation, type Locale } from './i18n.js
 export { Avatar, PeopleProvider, usePeople } from './people.js';
 export { defaultStandings, isDraw, scoreFor, standingsFor } from './standings.js';
 export { isViewerRelativeLabel, seatDisplayLabel } from './seat-label.js';
+export { default as PlayerTag, SeatAvatar, controllerOfSeat } from './PlayerTag.js';

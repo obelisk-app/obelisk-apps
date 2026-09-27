@@ -20,7 +20,8 @@ import GameOverOverlay from './GameOverOverlay.js';
 import GameResults from './GameResults.js';
 import { useGameUi } from './game-ui.js';
 import { useTranslation } from './i18n.js';
-import { Avatar, usePeople } from './people.js';
+import { usePeople } from './people.js';
+import { SeatAvatar } from './PlayerTag.js';
 import { seatDisplayLabel } from './seat-label.js';
 import StartTable from './StartTable.js';
 
@@ -253,8 +254,7 @@ export default function GameApp({ host, table }: { host: Host; table: Table }) {
           <ul className="mt-3 space-y-2" data-testid="game-roster">
             {roster.map((pk, i) => (
               <li key={pk} className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: ui.colors[i] }} />
-                <Avatar pubkey={pk} size={7} />
+                <SeatAvatar pubkey={pk} color={ui.colors[i] ?? '#a3a3a3'} size={30} />
                 <span className="min-w-0 truncate text-sm text-lc-white">{nameOf(pk)}</span>
                 {pk === myPubkey && <span className="text-[11px] text-lc-muted">(you)</span>}
                 {pk === session.createdBy && (

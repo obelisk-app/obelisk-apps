@@ -5,9 +5,15 @@
  * promotion choice.
  */
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+
+function useNow(): number {
+  const [t, setT] = useState(() => Math.floor(Date.now() / 1000));
+  useEffect(() => { const id = setInterval(() => setT(Math.floor(Date.now() / 1000)), 1000); return () => clearInterval(id); }, []);
+  return t;
+}
 import { Chess, type Square } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
-import type { BoardProps } from '@obelisk/apps-ui';
+import { PlayerTag, type BoardProps } from '@obelisk/apps-ui';
 
 import { replay, sideOf, type ChessAction, type ChessState, type Promotion } from './engine';
 
@@ -18,7 +24,22 @@ const PROMOTION_CHOICES: { piece: Promotion; label: string }[] = [
   { piece: 'n', label: 'Knight' },
 ];
 
-const GLYPH: Record<string, string> = { q: '♛', r: '♜', b: '♝', n: '♞' };
+const GLYPH: Record<string, string> = { q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
+const VALUE: Record<string, number> = { q: 9, r: 5, b: 3, n: 3, p: 1 };
+const START: Record<string, number> = { q: 1, r: 2, b: 2, n: 2, p: 8 };
+
+/** What each side has taken, from the position alone (promotions count as the piece they became). */
+export function material(game: Chess): { w: { taken: string[]; score: number }; b: { taken: string[]; score: number } } {
+  const left = { w: { q: 0, r: 0, b: 0, n: 0, p: 0 }, b: { q: 0, r: 0, b: 0, n: 0, p: 0 } } as Record<'w' | 'b', Record<string, number>>;
+  for (const row of game.board()) for (const p of row) if (p && p.type !== 'k') left[p.color][p.type] += 1;
+  const takenFrom = (c: 'w' | 'b') => (['q', 'r', 'b', 'n', 'p'] as const)
+    .flatMap((t) => Array.from({ length: Math.max(0, START[t] - left[c][t]) }, () => t));
+  const worth = (c: 'w' | 'b') => Object.entries(left[c]).reduce((n, [t, k]) => n + VALUE[t] * k, 0);
+  return {
+    w: { taken: takenFrom('b'), score: worth('w') - worth('b') },
+    b: { taken: takenFrom('w'), score: worth('b') - worth('w') },
+  };
+}
 
 const LAST_MOVE: CSSProperties = { background: 'color-mix(in oklab, var(--color-lc-green) 32%, transparent)' };
 const PICKED: CSSProperties = { background: 'color-mix(in oklab, var(--color-lc-green) 50%, transparent)' };
@@ -27,6 +48,7 @@ const CAPTURE: CSSProperties = { background: 'radial-gradient(circle, transparen
 const CHECK: CSSProperties = { background: 'radial-gradient(circle, #ef4444 0%, rgba(239,68,68,0.45) 45%, transparent 70%)' };
 
 export default function ChessBoard({ session, mySeats, onMove, busy, box, seatLabel }: BoardProps) {
+  const now = useNow();
   const state = session.state as ChessState | null;
   const moves = state?.moves ?? [];
   const game = useMemo(() => replay(moves), [moves]);
@@ -97,19 +119,53 @@ export default function ChessBoard({ session, mySeats, onMove, busy, box, seatLa
     for (const m of legalFrom(picked)) squareStyles[m.to] = m.captured ? CAPTURE : TARGET;
   }
 
-  const side = Math.floor(Math.max(200, Math.min(box.width - 8, box.height - 48)));
-  const status = session.status === 'in_progress'
-    ? `${turn === 'w' ? 'White' : 'Black'} to move${game.inCheck() ? ' · check' : ''}`
-    : state.end ? ENDINGS[state.end] : '';
+  // Two player bars (~48px each) and the move list share the height with the board.
+  const side = Math.floor(Math.max(200, Math.min(box.width - 8, box.height - 104)));
+  const mat = material(game);
+  const secondsLeft = session.turnDeadline !== null ? Math.max(0, session.turnDeadline - now) : null;
+  const top: 'w' | 'b' = orientation === 'white' ? 'b' : 'w';
+  const bar = (c: 'w' | 'b') => {
+    const seat = c === 'w' ? state.white : state.black;
+    const onMove = session.status === 'in_progress' && turn === c;
+    const m = mat[c];
+    return (
+      <div className="flex w-full items-center justify-between gap-2" style={{ maxWidth: side }} data-testid={`chess-bar-${c}`}>
+        <PlayerTag
+          session={session}
+          seat={seat}
+          label={seatLabel(seat)}
+          color={c === 'w' ? '#f5f5f5' : '#18181b'}
+          active={onMove}
+          mine={mySeats.includes(seat)}
+          out={session.winner !== null && session.winner !== seat && session.status === 'finished'}
+        >
+          <span className="tracking-tight" data-testid={`chess-taken-${c}`}>
+            {m.taken.map((t) => GLYPH[t]).join('')}
+            {m.score > 0 && <span className="ml-1 text-lc-white">+{m.score}</span>}
+            {m.taken.length === 0 && m.score <= 0 && (c === 'w' ? 'White' : 'Black')}
+          </span>
+        </PlayerTag>
+        {onMove && (
+          <span
+            className={`shrink-0 rounded-lg px-2 py-1 font-mono text-sm ${
+              secondsLeft !== null && secondsLeft <= 10 ? 'bg-red-500/20 text-red-300' : 'bg-lc-card text-lc-white'
+            }`}
+            data-testid="chess-to-move"
+          >
+            {game.inCheck() ? 'check · ' : ''}{secondsLeft !== null ? `${secondsLeft}s` : 'to move'}
+          </span>
+        )}
+        {!onMove && session.status === 'finished' && session.winner === seat && (
+          <span className="shrink-0 rounded-lg bg-lc-card px-2 py-1 text-sm" aria-label="winner">🏆</span>
+        )}
+      </div>
+    );
+  };
+  const status = session.status === 'finished' && state.end ? ENDINGS[state.end] : '';
 
   return (
     <div className="flex w-full flex-col items-center gap-2" data-testid="chess-board">
-      <div className="flex w-full items-center justify-between text-xs" style={{ maxWidth: side }}>
-        <span className="text-lc-white" data-testid="chess-status">{status}</span>
-        <span className="text-lc-muted">
-          ♔ {seatLabel(state.white)} · ♚ {seatLabel(state.black)}
-        </span>
-      </div>
+      {bar(top)}
 
       <div className="relative" style={{ width: side, height: side }}>
         <Chessboard
@@ -127,12 +183,12 @@ export default function ChessBoard({ session, mySeats, onMove, busy, box, seatLa
               setPicked(piece && piece.pieceType[0] === turn ? square : null);
             },
             squareStyles,
-            darkSquareStyle: { backgroundColor: '#3f3f46' },
-            lightSquareStyle: { backgroundColor: '#a1a1aa' },
-            // Coordinates in each square's opposite shade; the default orange
-            // was unreadable on the light squares.
-            darkSquareNotationStyle: { color: '#a1a1aa', fontWeight: 600 },
-            lightSquareNotationStyle: { color: '#3f3f46', fontWeight: 600 },
+            // A cool blue-grey board: calm next to the dark UI, and high
+            // contrast for both piece colours.
+            darkSquareStyle: { backgroundColor: '#7b93a6' },
+            lightSquareStyle: { backgroundColor: '#dfe5ea' },
+            darkSquareNotationStyle: { color: '#dfe5ea', fontWeight: 700, fontSize: 11 },
+            lightSquareNotationStyle: { color: '#7b93a6', fontWeight: 700, fontSize: 11 },
             boardStyle: { borderRadius: 8, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.45)' },
             animationDurationInMs: 180,
           }}
@@ -163,6 +219,10 @@ export default function ChessBoard({ session, mySeats, onMove, busy, box, seatLa
           </div>
         )}
       </div>
+
+      {bar(top === 'w' ? 'b' : 'w')}
+
+      {status && <p className="text-xs font-semibold text-lc-white" data-testid="chess-status">{status}</p>}
 
       {history.length > 0 && (
         <ol className="flex w-full flex-wrap gap-x-3 gap-y-0.5 font-mono text-[11px] text-lc-muted" style={{ maxWidth: side }} data-testid="chess-moves">

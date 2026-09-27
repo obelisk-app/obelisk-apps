@@ -28,7 +28,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GameSession } from '@obelisk/apps-sdk/turn';
-import { useTranslation } from '@obelisk/apps-ui';
+import { SeatAvatar, controllerOfSeat, useTranslation } from '@obelisk/apps-ui';
 import { incomingFor, type MatchState } from './match';
 import { useStackerLoop, type CheckpointPayload } from './useStackerLoop';
 import { MUSIC_CREDIT, currentTrack, setTrackListener } from './audio';
@@ -226,7 +226,10 @@ export default function StackerTable({
             return (
               <div key={seat} className="text-center" data-testid={`stacker-opponent-${seat}`}>
                 <MiniBoard board={p.board} height={p.stackHeight} dead={!p.alive} cell={Math.max(4, Math.round(cell / 4))} />
-                <div className="mt-1 max-w-[72px] truncate text-[10px] text-lc-white">{seatLabel(seat)}</div>
+                <div className="mt-1 flex max-w-[88px] items-center justify-center gap-1">
+                  <SeatAvatar pubkey={controllerOfSeat(session, seat)} color={p.alive ? '#a3a3a3' : '#52525b'} size={18} dim={!p.alive} />
+                  <span className="truncate text-[10px] text-lc-white">{seatLabel(seat)}</span>
+                </div>
                 <div className="text-[10px] text-lc-muted">{p.attacksSent}⚔ · {p.linesCleared}▤</div>
                 {p.verified === false && (
                   <div className="text-[9px] text-red-400" title={p.suspect ?? undefined} data-testid={`stacker-suspect-${seat}`}>
