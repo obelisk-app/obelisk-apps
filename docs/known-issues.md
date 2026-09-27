@@ -18,10 +18,16 @@ Full context is in [security.md § Gaps](security.md#gaps-what-the-sandbox-does-
 - **Walk-aways on tables with no clock.** Vesta and Stacker default to no turn clock, so a player who stops publishing stalls the table forever. Only a clock (`timeout`) resolves it.
 - **The table host picks the seat order** at `start`, and could collude with a player.
 - **No hidden information.** Every move is public on the relay, so card games (hands, decks) need commit-reveal or NIP-44 to specific players. Neither is designed yet, and NIP-44 needs a host capability that v1 withholds on purpose.
-- **Same-second events reorder by id.** Replay sorts by `(created_at, id)`, and `created_at` has one-second resolution. If a host presses Start in the same second someone's `join` lands, the `start` can sort first, and that player's seat is dropped because they hadn't joined yet. This matches obelisk-dex games before the migration. A fix would make `start` reference the join ids it saw (`e` tags) instead of relying on order. Found while porting the SDK tests (2026-09-27).
+- **Same-second events reorder by id.** Replay sorts by `(created_at, id)`, and `created_at` has one-second resolution. If a host presses Start in the same second someone's `join` lands, the `start` can sort first, and that player's seat is dropped because they hadn't joined yet. This matches obelisk-dex games before the migration. A fix would make `start` reference the join ids it saw (`e` tags) instead of relying on order. Found while porting the SDK tests (2026-09-27). Realtime games hit it too: an `attack` or `checkpoint` published in the same second as `start` can sort before it and be dropped. Stacker's smoke test saw a `topout` do exactly that until the clock moved. In practice nobody clears a line within a second of the start.
 - **Stacker cheats are detected, not prevented.** `verifyCheckpoint` flags a player whose claimed board doesn't match their replayed inputs, but the match has already been affected.
 
 ## Platform: open issues
+
+## Inside the sandbox (found porting Stacker, 2026-09-27)
+
+- **Keyboard focus.** Keys reach an app only while its frame document has focus. Stacker grabs focus on mount and on every pointer-down, but a browser may refuse focus to a cross-origin sandboxed frame without a user gesture. Players may need to click the board once. Not yet tried in a real browser.
+- **Audio needs a gesture inside the frame.** The frame has `allow=""`, so nothing autoplays. Stacker starts audio only from a keydown inside the frame, and falls back to its synthesized bed if `play()` is refused. The music path can't be exercised in jsdom.
+- **Links can't open.** There's no `allow-popups`, so `<a target="_blank">` does nothing (Stacker's music credit link). A same-frame link would navigate the frame away, which the host treats as the exfiltration signal and kills. The source URL is in the link's hover text. A host `ui.openLink` capability (showing the URL to the user and letting them confirm) would fix it; it's v2.
 
 - ~~**Blossom servers that accept JS.**~~ — **resolved 2026-09-27.** The media servers obelisk-dex uses for attachments (primal, nostr.build, blossom.band) reject non-media. `https://blossom.obelisk.ar` now runs hzrd149's reference blossom-server from our fork (`obelisk-app/blossom-server`, with `pubkeysFile` rules and `sandboxBlobs`). Its upload allowlists are written by `packages/blossom-wot` from the obelisk-relay WoT ladder. `nostr.download` remains a valid secondary `server` hint.
 - **blossom.obelisk.ar has one disk and no mirror.** It runs on the same host as both relays, with a 3 GiB cap on a volume that has ~6 GiB free. If the host or volume dies, every app whose only `server` hint is ours becomes unopenable. First-party manifests should also list `nostr.download` and actually copy the blobs there (BUD-04 `PUT /mirror` on the receiving server). Nothing does that yet.
@@ -46,7 +52,7 @@ This is the build order from the migration plan:
 
 1. ~~The SDK (`packages/sdk`)~~ — **done 2026-09-27**: host client, turn kit (replay, table, clock enforcer) ported from dex, a generic `realtime` hook replacing the Stacker-specific branch, and `testing/` FakeRelay + FakeHost.
 2. ~~The frame loader (`packages/frame`)~~ — **live 2026-09-27** at `https://frame.obelisk.ar/v1/` (Caddy :8101 via the `fabri-ssh` tunnel), next to `https://blossom.obelisk.ar` (pm2 `obelisk-blossom` :3023).
-3. Chain Reaction and Vesta ported onto the SDK as complete, buildable apps with their dex tests plus built-bundle smoke tests — **done 2026-09-27**. Stacker's engine is ported and its UI is in progress.
+3. ~~Chain Reaction, Vesta and Stacker ported onto the SDK~~ — **done 2026-09-27**: complete, buildable apps (bundles of 288 / 319 / 320 KiB, no eval) with their dex tests plus built-bundle smoke tests.
 4. The relay change for kind 32390.
 5. The `games.obelisk.ar` dashboard (admin-shell design, see obelisk-design).
 6. The obelisk-dex switch, in one PR.
