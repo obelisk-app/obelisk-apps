@@ -1,0 +1,19 @@
+# frame.obelisk.ar: Obelisk Apps sandbox frame loader (obelisk-apps/packages/frame).
+# Stranger code runs under this origin (opaque, sandboxed); keep it free of any
+# login session and never serve anything else here.
+:8101 {
+	bind 127.0.0.1
+	root * /root/obelisk-apps/packages/frame/public
+	file_server
+	encode gzip
+	redir / /v1/ 302
+	header {
+		Content-Security-Policy "default-src 'none'; script-src 'self' blob: 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' blob:; img-src data: blob:; media-src data: blob:; font-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors https://obelisk.ar https://dex.obelisk.ar https://test.obelisk.ar https://games.obelisk.ar tauri://localhost http://tauri.localhost http://localhost:3000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Cross-Origin-Resource-Policy cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
+		Cache-Control "no-cache"
+		-Server
+	}
+}

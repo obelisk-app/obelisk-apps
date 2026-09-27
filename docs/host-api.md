@@ -25,10 +25,10 @@ obelisk-dex (https://obelisk.ar)                 frame loader (https://frame.obe
 1. **Load:** the host mounts `<iframe src="https://frame.obelisk.ar/v1/" sandbox="allow-scripts" allow="" referrerpolicy="no-referrer">`.
 2. **Hello:** the loader posts `{obelisk: 1, type: "hello", loader: "<version>"}` to `window.parent`.
 3. **Handshake:** the host checks that `event.source === iframe.contentWindow`. It creates a `MessageChannel` and posts `{type: "boot", port, entry: Blob}`, transferring `port2`. It uses target origin `"*"`, because a sandboxed frame's origin is the opaque `"null"`.
-4. **Start:** the loader accepts `boot` only when `event.source === window.parent` and `event.origin` is in its allowlist (obelisk.ar, test.obelisk.ar, the Tauri origin, localhost in dev). It then:
+4. **Start:** the loader accepts `boot` only when `event.source === window.parent` and `event.origin` is in its allowlist (obelisk.ar, dex.obelisk.ar, test.obelisk.ar, the games.obelisk.ar Playground, both Tauri origins, localhost:3000 in dev; `ALLOWED_PARENTS` in `packages/frame/public/v1/loader.js`). It then:
    - imports the entry via a `blob:` URL;
-   - hands the port to the SDK;
-   - calls the module's default export: `export default function main(host: Host): void | Promise<void>`.
+   - calls the module's default export as `main({ port, root })`, where `root` is the page's `#app` element: `export default function main(ctx: { port: MessagePort; root: HTMLElement }): void | Promise<void>`. Apps normally pass `ctx` straight to the SDK's `connect(ctx)`, which returns the `Host` used below.
+   - If the import or `main` throws, the loader posts `{type: "fatal", message}` on the port, and the host shows it in the frame chrome.
 5. **Everything else** goes over the `MessagePort`, never over `window.postMessage`. A port belongs to the document it was transferred into: if the app navigates its frame away, the port dies with it and the new page receives nothing.
 
 The entry is a **single self-contained ES module**. A `blob:` module can't resolve relative imports, so bundlers must inline everything, and other files come in through `asset()`.

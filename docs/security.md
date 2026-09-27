@@ -36,7 +36,7 @@ Everything that crosses the port from the right side is input to validate, inclu
 
 ### Frame loader CSP
 
-This is served by `https://frame.obelisk.ar/v1/` on its own response, independent of dex's CSP:
+This is sent as a response header by `https://frame.obelisk.ar/v1/` (a `<meta>` CSP would ignore `frame-ancestors`), independent of dex's CSP. The source of truth is `packages/frame/Caddyfile.snippet`:
 
 ```
 default-src 'none';
@@ -48,7 +48,7 @@ font-src data: blob:;
 connect-src 'none';
 form-action 'none';
 base-uri 'none';
-frame-ancestors https://obelisk.ar https://test.obelisk.ar tauri://localhost http://tauri.localhost http://localhost:3000;
+frame-ancestors https://obelisk.ar https://dex.obelisk.ar https://test.obelisk.ar https://games.obelisk.ar tauri://localhost http://tauri.localhost http://localhost:3000;
 ```
 
 - **No `'unsafe-eval'`:** bundles that rely on `eval` or `new Function` fail to load. This is deliberate; see [known-issues.md](known-issues.md).
