@@ -1,0 +1,36 @@
+{
+  "name": "@obelisk/app-chess",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chess for Obelisk Apps: two players, full rules, every move replayed by every client",
+  "type": "module",
+  "scripts": {
+    "build": "node ../../scripts/build-app.mjs .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "obelisk": {
+    "slug": "chess",
+    "title": "Chess",
+    "types": ["game"],
+    "players": [2, 2],
+    "realtime": false,
+    "icon": "/icon.svg",
+    "content": "Classic chess for two. Seat 1 plays White. Checkmate, stalemate, threefold repetition, the fifty-move rule and insufficient material are all enforced; the turn clock is per move."
+  },
+  "dependencies": {
+    "@obelisk/apps-sdk": "*",
+    "@obelisk/apps-ui": "*",
+    "chess.js": "^1.4.0",
+    "react": "^19.0.0",
+    "react-chessboard": "^5.12.1",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4"
+  }
+}

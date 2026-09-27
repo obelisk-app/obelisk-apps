@@ -2,7 +2,7 @@
 
 Games and small apps for [Obelisk](https://github.com/obelisk-app/obelisk), shipped as Nostr events instead of as client code.
 
-**Status: spec stage.** Only `docs/` exists. The SDK, the frame loader, the three ported games (Chain Reaction, Vesta, Stacker) and the `games.obelisk.ar` dashboard come next. See [docs/known-issues.md](docs/known-issues.md).
+**Status: live on test.obelisk.ar.** The SDK, the shared UI shell, the frame loader, the Blossom sidecar and four games are built and published: Chain Reaction, Vesta and Stacker (moved from obelisk-dex) and Chess (new, on chess.js + react-chessboard). The `games.obelisk.ar` dashboard comes next. See [docs/known-issues.md](docs/known-issues.md).
 
 ## The idea in one paragraph
 
@@ -30,7 +30,18 @@ packages/frame/       the sandbox loader page (served from its own origin)
 apps/chain-reaction/  first-party apps, moved from obelisk-dex
 apps/vesta/
 apps/stacker/
+apps/chess/           chess.js rules, react-chessboard UI
 dashboard/            games.obelisk.ar: publish, browse, try apps (admin-shell design)
+```
+
+## Build, test, publish
+
+```bash
+npm install
+npm test                                   # every package and app
+cd apps/chess && npm run build             # dist/index.js + assets + manifest draft
+node scripts/frame-harness.mjs apps/chess --stage board --click e2,e4   # real Chromium, real frame
+node scripts/publish-app.mjs apps/chess --nsec-file <file> --relay wss://public.obelisk.ar
 ```
 
 ## Docs
