@@ -22,7 +22,10 @@ Full context is in [security.md § Gaps](security.md#gaps-what-the-sandbox-does-
 
 ## Platform: open issues
 
-- **Blossom servers that accept JS.** The media servers obelisk-dex uploads attachments to (primal, nostr.build, blossom.band) sniff uploads and reject anything that isn't media. `application/javascript` and `octet-stream` get 415 or an HTML page, measured 2026-09-26 for DM attachments. Only `nostr.download` and `blossom.yakihonne.com` are known to store arbitrary blobs. An Obelisk-run Blossom server (e.g. `blossom.obelisk.ar`) is probably needed for first-party apps. **Decision pending.**
+- ~~**Blossom servers that accept JS.**~~ — **resolved 2026-09-27.** The media servers obelisk-dex uses for attachments (primal, nostr.build, blossom.band) reject non-media, so an Obelisk-run server now exists: `packages/blossom`, served at `https://blossom.obelisk.ar`. Uploads are gated by the obelisk-relay WoT ladder (see its README). `nostr.download` and `blossom.yakihonne.com` remain valid secondary `server` hints.
+- **blossom.obelisk.ar has one disk and no mirror.** It runs on the same host as both relays, with a 3 GiB cap on a volume that has ~6 GiB free. If the host or volume dies, every app whose only `server` hint is ours becomes unopenable. First-party manifests should also list `nostr.download` and actually mirror there (BUD-04 `PUT /mirror`, not implemented yet on our side).
+- **The Blossom WoT is only as good as three public relays.** Contact lists come from damus, nos.lol and purplepag.es, the relay's hardcoded `FOLLOW_RELAYS`. A key whose kind 3 is only on other relays isn't admitted until it's added to `manualAllow`.
+- **Blossom quotas count shared blobs against every owner,** and a blob a blocked user uploaded before being blocked stays served until someone deletes it. There's no operator purge endpoint yet; for now, remove it from `index.json` and `blobs/` by hand.
 - **An app disappears when its blobs do.** If the author deletes the blobs, or every hinted server drops them, the app can't open. That includes live sessions of an old version (app-format.md §1, keep blobs ≥ 8 days). Nothing mirrors them yet.
 - **The first open of an app is slow.** It fetches the entry (and eventually assets) from Blossom. Later opens hit the Cache Storage copy keyed by hash.
 - **No `eval`.** Bundles that use `eval` or `new Function` (some template engines, older emulators) don't load, because the frame CSP omits `'unsafe-eval'`. This is intentional. Document it in `building-an-app.md` when that's written.
@@ -39,7 +42,7 @@ Full context is in [security.md § Gaps](security.md#gaps-what-the-sandbox-does-
 This is the build order from the migration plan:
 
 1. The SDK (`packages/sdk`): host client, turn kit ported from dex `session.ts`, realtime kit from `stacker/match.ts`, fake-host harness.
-2. The frame loader (`packages/frame`), with the CSP above, deployed to `frame.obelisk.ar`.
+2. ~~The frame loader (`packages/frame`)~~: written and served on this host (Caddy :8101). `frame.obelisk.ar` still needs its DNS record and tunnel route.
 3. Chain Reaction, Vesta and Stacker ported onto the SDK, with their dex tests.
 4. The relay change for kind 32390.
 5. The `games.obelisk.ar` dashboard (admin-shell design, see obelisk-design).

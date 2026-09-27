@@ -35,8 +35,8 @@ The file-mapping tags are the ones [NIP-5A](https://github.com/nostr-protocol/ni
     ["path", "/music/a.mp3","<sha256>"],
     ["icon", "/icon.svg"],                          // a `path` above, not a URL
     ["x", "<aggregate sha256>", "aggregate"],       // REQUIRED, NIP-5A §Aggregate Hash
-    ["server", "https://nostr.download"],           // Blossom hints, in preference order
-    ["server", "https://blossom.yakihonne.com"],
+    ["server", "https://blossom.obelisk.ar"],       // Blossom hints, in preference order
+    ["server", "https://nostr.download"],
     ["source", "https://github.com/obelisk-app/obelisk-apps"],
     ["alt", "Obelisk app: Chain Reaction"]          // NIP-31, for clients that don't know this kind
   ]
