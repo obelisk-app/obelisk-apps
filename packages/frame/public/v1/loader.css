@@ -1,2 +1,3 @@
 html, body { margin: 0; height: 100%; background: #0a0a0a; color: #fafafa; }
 #app { height: 100%; }
+#app.standalone { display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; color: #a3a3a3; font: 14px/1.5 ui-sans-serif, system-ui, sans-serif; }

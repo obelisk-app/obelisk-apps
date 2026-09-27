@@ -45,5 +45,12 @@ async function onMessage(event) {
   }
 }
 
-window.addEventListener('message', onMessage);
-window.parent.postMessage({ obelisk: 1, type: 'hello', loader: LOADER_VERSION }, '*');
+// Opened directly rather than embedded: say what this is instead of a blank page.
+if (window.parent === window) {
+  const root = document.getElementById('app');
+  root.className = 'standalone';
+  root.textContent = 'This is the Obelisk Apps sandbox. It stays empty until Obelisk opens an app inside it; there is nothing to see here on its own.';
+} else {
+  window.addEventListener('message', onMessage);
+  window.parent.postMessage({ obelisk: 1, type: 'hello', loader: LOADER_VERSION }, '*');
+}
