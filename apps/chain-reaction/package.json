@@ -1,0 +1,18 @@
+{
+  "name": "@obelisk/app-chain-reaction",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chain Reaction for Obelisk Apps: place orbs, trigger explosions, take the board",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@obelisk/apps-sdk": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4"
+  }
+}

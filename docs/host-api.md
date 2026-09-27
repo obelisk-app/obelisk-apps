@@ -57,6 +57,7 @@ type Push = { type: string; [k: string]: unknown }                     // host â
 | `participants` | `{participants: Participant[]}` | When joins, leaves or profiles change |
 | `visibility` | `{visible: boolean}` | The modal is hidden or shown. Realtime apps should pause. |
 | `env` | `{locale, theme}` | The user changed the language or theme |
+| `connection` | `{connected: boolean, since: number \| null}` | The host's relay socket went up or down. `since` is the unix second it last came up. The turn kit waits 20 s after a reconnect before claiming anyone's clock, so a tab that just woke up can't report a player for a turn it never saw. |
 
 ```ts
 interface Init {
@@ -74,6 +75,7 @@ interface Init {
   locale: 'en' | 'es' | 'pt'
   theme: { mode: 'dark' | 'light'; accent: string }   // accent is a #rrggbb the host chose
   limits: { contentBytes: number; publishPerSecond: number; storageBytes: number }
+  connection: { connected: boolean; since: number | null }
 }
 
 interface Participant {

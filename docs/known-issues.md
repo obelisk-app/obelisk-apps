@@ -18,6 +18,7 @@ Full context is in [security.md § Gaps](security.md#gaps-what-the-sandbox-does-
 - **Walk-aways on tables with no clock.** Vesta and Stacker default to no turn clock, so a player who stops publishing stalls the table forever. Only a clock (`timeout`) resolves it.
 - **The table host picks the seat order** at `start`, and could collude with a player.
 - **No hidden information.** Every move is public on the relay, so card games (hands, decks) need commit-reveal or NIP-44 to specific players. Neither is designed yet, and NIP-44 needs a host capability that v1 withholds on purpose.
+- **Same-second events reorder by id.** Replay sorts by `(created_at, id)`, and `created_at` has one-second resolution. If a host presses Start in the same second someone's `join` lands, the `start` can sort first, and that player's seat is dropped because they hadn't joined yet. This matches obelisk-dex games before the migration. A fix would make `start` reference the join ids it saw (`e` tags) instead of relying on order. Found while porting the SDK tests (2026-09-27).
 - **Stacker cheats are detected, not prevented.** `verifyCheckpoint` flags a player whose claimed board doesn't match their replayed inputs, but the match has already been affected.
 
 ## Platform: open issues
@@ -42,7 +43,7 @@ Full context is in [security.md § Gaps](security.md#gaps-what-the-sandbox-does-
 
 This is the build order from the migration plan:
 
-1. The SDK (`packages/sdk`): host client, turn kit ported from dex `session.ts`, realtime kit from `stacker/match.ts`, fake-host harness.
+1. ~~The SDK (`packages/sdk`)~~ — **done 2026-09-27**: host client, turn kit (replay, table, clock enforcer) ported from dex, a generic `realtime` hook replacing the Stacker-specific branch, and `testing/` FakeRelay + FakeHost.
 2. ~~The frame loader (`packages/frame`)~~ — **live 2026-09-27** at `https://frame.obelisk.ar/v1/` (Caddy :8101 via the `fabri-ssh` tunnel), next to `https://blossom.obelisk.ar` (pm2 `obelisk-blossom` :3023).
 3. Chain Reaction, Vesta and Stacker ported onto the SDK, with their dex tests.
 4. The relay change for kind 32390.

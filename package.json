@@ -1,0 +1,10 @@
+{
+  "name": "obelisk-apps",
+  "private": true,
+  "description": "Games and apps for Obelisk, published as Nostr events and run sandboxed by the client",
+  "workspaces": ["packages/sdk", "apps/*"],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm test --workspaces --if-present"
+  }
+}

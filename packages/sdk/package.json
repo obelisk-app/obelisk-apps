@@ -1,0 +1,24 @@
+{
+  "name": "@obelisk/apps-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "App side of the Obelisk Apps host API v1, plus the turn-based game kit and an in-memory test host",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./turn": "./dist/turn/index.js",
+    "./testing": "./dist/testing/index.js"
+  },
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4",
+    "jsdom": "^25.0.1"
+  }
+}
