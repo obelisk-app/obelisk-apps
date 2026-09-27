@@ -23,6 +23,17 @@
   --color-lc-olive-dark: #1e2812;
 }
 
+:root {
+  /* dex's theme tokens the lc-* component rules read (src/app/globals.css).
+     The button follows --color-lc-green, which mountGame sets from the host's
+     accent, so a relay retinted purple gets purple buttons here too. */
+  --obelisk-app-bg: #0a0a0a;
+  --obelisk-app-bg-panel: #171717;
+  --obelisk-button: var(--color-lc-green);
+  --obelisk-button-hover: color-mix(in oklab, var(--color-lc-green) 85%, white);
+  --obelisk-button-ink: #0a0a0a;
+}
+
 html, body { margin: 0; min-height: 100%; background: var(--color-lc-dark); color: var(--color-lc-white);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 #app { min-height: 100vh; }

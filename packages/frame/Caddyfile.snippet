@@ -12,8 +12,14 @@
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer
 		Cross-Origin-Resource-Policy cross-origin
+		# The page runs sandboxed (origin "null"), and browsers fetch its
+		# module script in CORS mode: without this, loader.js is blocked and
+		# the frame stays blank. Public static files, nothing to protect.
+		Access-Control-Allow-Origin *
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=()"
-		Cache-Control "no-cache"
+		# no-store, not no-cache: Cloudflare kept serving a cached loader.js with
+		# stale headers after a revalidation. These files are tiny; never edge-cache them.
+		Cache-Control "no-store"
 		-Server
 	}
 }
