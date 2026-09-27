@@ -2,9 +2,18 @@
   "name": "obelisk-apps",
   "private": true,
   "description": "Games and apps for Obelisk, published as Nostr events and run sandboxed by the client",
-  "workspaces": ["packages/sdk", "apps/*"],
+  "workspaces": [
+    "packages/sdk",
+    "packages/ui",
+    "apps/*"
+  ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "esbuild": "^0.25.12",
+    "tailwindcss": "^4.3.3"
   }
 }

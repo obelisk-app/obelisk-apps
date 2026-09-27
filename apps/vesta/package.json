@@ -1,0 +1,10 @@
+{
+  "name": "@obelisk/app-vesta",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vesta for Obelisk Apps: settle, trade and build on a hex island",
+  "type": "module",
+  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit -p tsconfig.json" },
+  "dependencies": { "@obelisk/apps-sdk": "*", "vesta": "github:fchurca/vesta#semver:^0" },
+  "devDependencies": { "typescript": "^5.7.2", "vitest": "^3.2.4" }
+}

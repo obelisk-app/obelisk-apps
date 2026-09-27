@@ -1,0 +1,10 @@
+{
+  "name": "@obelisk/app-stacker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Stacker for Obelisk Apps: real-time falling-block battles",
+  "type": "module",
+  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit -p tsconfig.json" },
+  "dependencies": { "@obelisk/apps-sdk": "*" },
+  "devDependencies": { "typescript": "^5.7.2", "vitest": "^3.2.4", "jsdom": "^25.0.1" }
+}
