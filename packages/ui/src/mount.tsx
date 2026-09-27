@@ -37,8 +37,22 @@ function Root({ host, table, ui }: { host: Host; table: Table; ui: GameUi }) {
  * relay retinted purple stays purple inside the frame. Only a #rrggbb gets
  * through: this value lands in a style attribute.
  */
+export function inkFor(accent: string): string {
+  // Dex's own rule (src/lib/preferences.ts readableInk), so a game's buttons
+  // read like the app around them: dark text only on light colours (lime),
+  // light text on the purple relay accent.
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const c = parseInt(accent.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.42 ? '#0a0a0a' : '#fafafa';
+}
+
 function applyAccent(accent: string): void {
-  if (/^#[0-9a-f]{6}$/i.test(accent)) document.documentElement.style.setProperty('--color-lc-green', accent);
+  if (!/^#[0-9a-f]{6}$/i.test(accent)) return;
+  const root = document.documentElement.style;
+  root.setProperty('--color-lc-green', accent);
+  root.setProperty('--obelisk-button-ink', inkFor(accent));
 }
 
 export async function mountGame(ctx: HostContext, ui: GameUi, css?: string): Promise<{ host: Host; table: Table }> {

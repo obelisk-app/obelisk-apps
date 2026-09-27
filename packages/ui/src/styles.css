@@ -72,12 +72,16 @@ html, body { margin: 0; min-height: 100%; background: var(--color-lc-dark); colo
 }
 
 .lc-pill-secondary {
-  background: #262626;
+  /* A visible affordance, per the La Crypta rules: border + faint fill,
+     brightening on hover. Grey-on-grey read as disabled. */
+  background: color-mix(in oklab, #1a1a1a 60%, transparent);
+  border: 1px solid #3f3f46;
   color: #fafafa;
 }
 
 .lc-pill-secondary:hover {
-  background: #333333;
+  background: #262626;
+  border-color: #71717a;
 }
 
 /* Skeleton loading */

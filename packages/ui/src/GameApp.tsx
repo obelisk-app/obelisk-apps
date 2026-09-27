@@ -10,7 +10,7 @@
  * is no optimistic local board, because a board the relay hasn't accepted is a
  * board the other players cannot see.
  */
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Host } from '@obelisk/apps-sdk';
 import {
   canJoin, canStart, seatsControlledBy, turnSecondsLeft, type GameSession, type SeatSpec, type Table,
@@ -24,8 +24,12 @@ import { Avatar, usePeople } from './people.js';
 import { seatDisplayLabel } from './seat-label.js';
 import StartTable from './StartTable.js';
 
-/** Title row, clock, seat legend and action buttons: what the board doesn't get. */
-const CHROME_PX = 150;
+/**
+ * Room a board keeps for its own legend under the cells (seat chips, "you
+ * play as"). Everything else around it is measured, not guessed: a guessed
+ * constant is what made the board overflow the frame by a few pixels.
+ */
+const BOARD_LEGEND_PX = 64;
 /** The deciding move is the biggest cascade; let it play before the splash covers it. */
 const RESULT_SPLASH_DELAY_MS = 300;
 /** …and a ceiling, so a board that never reports "done" can't eat the splash. */
@@ -75,6 +79,22 @@ export default function GameApp({ host, table }: { host: Host; table: Table }) {
   const [error, setError] = useState<string | null>(null);
   const [seatPickerOpen, setSeatPickerOpen] = useState(false);
   const [boardRevealing, setBoardRevealing] = useState(false);
+  const boardArea = useRef<HTMLDivElement>(null);
+  const actionsRow = useRef<HTMLDivElement>(null);
+  const [measured, setMeasured] = useState<{ area: number; actions: number; width: number } | null>(null);
+  // Re-measure when the frame resizes or the table changes phase.
+  useLayoutEffect(() => {
+    const area = boardArea.current;
+    if (!area) return;
+    const measure = () => {
+      const next = { area: area.clientHeight, actions: actionsRow.current?.offsetHeight ?? 0, width: area.clientWidth };
+      setMeasured((cur) => (cur && cur.area === next.area && cur.actions === next.actions && cur.width === next.width ? cur : next));
+    };
+    measure();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    ro?.observe(area);
+    return () => ro?.disconnect();
+  });
 
   // Arm the splash a beat after the table finishes, keyed by the result it's
   // armed for so a rematch re-arms on its own.
@@ -118,7 +138,14 @@ export default function GameApp({ host, table }: { host: Host; table: Table }) {
     table.send(op, body).catch((err) => console.warn(`[${ui.def.type}] ${op} failed to publish`, err));
   }, [table, ui.def.type]);
 
-  const box = { width: Math.max(240, viewport.width - 24), height: Math.max(240, viewport.height - CHROME_PX) };
+  const box = useMemo(() => {
+    const areaH = measured?.area ?? viewport.height - 48;
+    const actionsH = measured?.actions ?? 40;
+    return {
+      width: Math.max(200, (measured?.width ?? viewport.width) - 8),
+      height: Math.max(200, areaH - actionsH - 12 - BOARD_LEGEND_PX),
+    };
+  }, [measured, viewport]);
 
   if (!session) {
     return (
@@ -137,6 +164,44 @@ export default function GameApp({ host, table }: { host: Host; table: Table }) {
     ? session.currentTurn
     : mySeats.length === 1 ? mySeats[0] : null;
 
+  const actions = (
+    <div className="flex flex-wrap items-center gap-2" data-testid="game-actions">
+      {canJoin(session, myPubkey) && (
+        <button type="button" disabled={busy} onClick={() => run(() => table.join())}
+          className="lc-pill-primary px-4 py-1.5 text-xs" data-testid="game-join">
+          {t('games.join')}
+        </button>
+      )}
+      {session.status === 'waiting' && myPubkey && myPubkey !== session.createdBy && session.joined.includes(myPubkey) && (
+        <button type="button" disabled={busy} onClick={() => run(() => table.leave())}
+          className="lc-pill-secondary px-4 py-1.5 text-xs" data-testid="game-leave">
+          Leave
+        </button>
+      )}
+      {canStart(session, myPubkey) && (
+        <button type="button" disabled={busy} onClick={() => setSeatPickerOpen(true)}
+          className="lc-pill-primary px-4 py-1.5 text-xs" data-testid="game-start">
+          Start ({session.joined.length})
+        </button>
+      )}
+      {session.status === 'waiting' && myPubkey === session.createdBy && (
+        <button type="button" disabled={busy} onClick={() => run(() => table.cancel())}
+          className="lc-pill-secondary px-4 py-1.5 text-xs" data-testid="game-cancel">
+          {t('games.cancelTable')}
+        </button>
+      )}
+      {session.status === 'in_progress' && resignSeat && !session.eliminated.includes(resignSeat) && (
+        <button type="button" disabled={busy} onClick={() => run(() => table.resign(resignSeat))}
+          className="lc-pill-secondary px-4 py-1.5 text-xs" data-testid="game-resign">
+          {t('games.resign')}
+        </button>
+      )}
+      {session.status === 'waiting' && session.joined.length < session.minPlayers && (
+        <span className="text-[11px] text-lc-muted">Needs {session.minPlayers} players to start.</span>
+      )}
+    </div>
+  );
+
   const status = (() => {
     switch (session.status) {
       case 'waiting': return `Waiting for players · ${session.joined.length}/${session.maxPlayers}`;
@@ -151,7 +216,7 @@ export default function GameApp({ host, table }: { host: Host; table: Table }) {
   })();
 
   return (
-    <div className="relative flex min-h-full flex-col p-3" data-testid="game-app">
+    <div className="relative flex h-screen flex-col overflow-y-auto p-3" data-testid="game-app">
       {seatPickerOpen && (
         <StartTable
           session={session}
@@ -167,30 +232,47 @@ export default function GameApp({ host, table }: { host: Host; table: Table }) {
         <GameOverOverlay session={session} myPubkey={myPubkey} onClose={() => setSplashArmedFor(null)} />
       )}
 
-      <p className="text-[11px] text-lc-muted" data-testid="game-status">
-        {status}
-        {session.status === 'in_progress' && secondsLeft !== null && ` · ${secondsLeft}s`}
-      </p>
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="truncate text-xs text-lc-muted" data-testid="game-status">{status}</p>
+        {session.status === 'in_progress' && secondsLeft !== null && (
+          <span className={`shrink-0 font-mono text-xs ${secondsLeft <= 10 ? 'text-red-400' : 'text-lc-white'}`} data-testid="game-clock">
+            {secondsLeft}s
+          </span>
+        )}
+      </div>
 
-      <div className="mt-3 flex flex-1 flex-col justify-center">
-        {session.status === 'waiting' || session.status === 'cancelled' ? (
-          <ul className="space-y-2" data-testid="game-roster">
+      {session.status === 'waiting' || session.status === 'cancelled' ? (
+        // The lobby: one card with the people and what to do next, near the
+        // top — not a lone roster line floating mid-frame with the buttons
+        // pinned to the far bottom.
+        <div className="mx-auto mt-6 w-full max-w-md rounded-xl border border-lc-border bg-lc-card p-4" data-testid="game-lobby">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold text-lc-white">{ui.icon} {ui.def.displayName}</h2>
+            <span className="text-[11px] text-lc-muted">{session.joined.length}/{session.maxPlayers}</span>
+          </div>
+          <ul className="mt-3 space-y-2" data-testid="game-roster">
             {roster.map((pk, i) => (
               <li key={pk} className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: ui.colors[i] }} />
-                <Avatar pubkey={pk} size={6} />
-                <span className="text-xs text-lc-white">{nameOf(pk)}</span>
-                {pk === myPubkey && <span className="text-[10px] text-lc-muted">(you)</span>}
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: ui.colors[i] }} />
+                <Avatar pubkey={pk} size={7} />
+                <span className="min-w-0 truncate text-sm text-lc-white">{nameOf(pk)}</span>
+                {pk === myPubkey && <span className="text-[11px] text-lc-muted">(you)</span>}
                 {pk === session.createdBy && (
                   <span className="rounded-full border border-lc-border px-1.5 text-[10px] text-lc-muted">host</span>
                 )}
               </li>
             ))}
           </ul>
-        ) : (
-          // The same element whether running or finished: swapping it for a
-          // results panel unmounted the board mid-animation, so the winning
-          // explosion was the one nobody saw.
+          {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
+          <div className="mt-4 border-t border-lc-border pt-3">
+            {actions}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-2 flex min-h-0 flex-1 flex-col items-center" ref={boardArea}>
+          {/* The same element whether running or finished: swapping it for a
+              results panel unmounted the board mid-animation, so the winning
+              explosion was the one nobody saw. */}
           <ui.Board
             session={session}
             mySeats={mySeats}
@@ -202,52 +284,15 @@ export default function GameApp({ host, table }: { host: Host; table: Table }) {
             onRevealChange={setBoardRevealing}
             host={host}
           />
-        )}
-      </div>
-
-      {session.status === 'finished' && (
-        <div className="mt-4">
-          <GameResults session={session} seatLabel={seatLabelFor} myPubkey={myPubkey} />
+          {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
+          {session.status === 'finished' && (
+            <div className="mt-4 w-full max-w-md">
+              <GameResults session={session} seatLabel={seatLabelFor} myPubkey={myPubkey} />
+            </div>
+          )}
+          <div className="mt-3" ref={actionsRow}>{actions}</div>
         </div>
       )}
-
-      {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {canJoin(session, myPubkey) && (
-          <button type="button" disabled={busy} onClick={() => run(() => table.join())}
-            className="lc-pill-primary px-4 py-1.5 text-xs" data-testid="game-join">
-            {t('games.join')}
-          </button>
-        )}
-        {session.status === 'waiting' && myPubkey && myPubkey !== session.createdBy && session.joined.includes(myPubkey) && (
-          <button type="button" disabled={busy} onClick={() => run(() => table.leave())}
-            className="lc-pill-secondary px-4 py-1.5 text-xs" data-testid="game-leave">
-            Leave
-          </button>
-        )}
-        {canStart(session, myPubkey) && (
-          <button type="button" disabled={busy} onClick={() => setSeatPickerOpen(true)}
-            className="lc-pill-primary px-4 py-1.5 text-xs" data-testid="game-start">
-            Start ({session.joined.length})
-          </button>
-        )}
-        {session.status === 'waiting' && myPubkey === session.createdBy && (
-          <button type="button" disabled={busy} onClick={() => run(() => table.cancel())}
-            className="lc-pill-secondary px-4 py-1.5 text-xs" data-testid="game-cancel">
-            {t('games.cancelTable')}
-          </button>
-        )}
-        {session.status === 'in_progress' && resignSeat && !session.eliminated.includes(resignSeat) && (
-          <button type="button" disabled={busy} onClick={() => run(() => table.resign(resignSeat))}
-            className="lc-pill-secondary px-4 py-1.5 text-xs" data-testid="game-resign">
-            {t('games.resign')}
-          </button>
-        )}
-        {session.status === 'waiting' && session.joined.length < session.minPlayers && (
-          <span className="text-[11px] text-lc-muted">Needs {session.minPlayers} players to start.</span>
-        )}
-      </div>
     </div>
   );
 }
